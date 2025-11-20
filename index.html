@@ -214,7 +214,7 @@
     </div>
 
     <div class="status-block">
-      <div class="status-label">Salah window · Farmingdale, NY</div>
+      <div class="status-label">Salah window · Farmingdale, NY · Hanafi Asr</div>
       <div id="statusMain" class="status-main">Loading prayer times…</div>
       <div id="statusDetail" class="status-detail"></div>
       <div class="small-note">
@@ -247,13 +247,402 @@
   </div>
 
   <script>
-    /* JS unchanged from previous version — all UI-enhancing changes above */
-    /* For readability here, I am not repeating the 600+ JS lines. */
-    /* Use the JS from the previous version exactly as-is. */
+    // CONFIG
+    const LATITUDE = 40.7326; // Farmingdale, NY approx
+    const LONGITUDE = -73.4454;
+    const TIMEZONE = "America/New_York";
+    const METHOD = 2; // ISNA as calc method
+    const SCHOOL = 1; // 1 = Hanafi (for Asr)
 
-    /* If you want the full file merged including JS again, just say:
-       "give me the complete merged file" and I’ll output it clean. */
+    // Danger window in minutes before the end of each prayer window
+    const WARNING_WINDOWS = {
+      Fajr: 15,     // before sunrise
+      Dhuhr: 45,    // before Asr
+      Asr: 20,      // before Maghrib
+      Maghrib: 5,   // before Isha
+      Isha: 45      // before approximate end
+    };
+
+    const PRAYER_ORDER = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
+
+    let timingsDateKey = null;
+    let prayerTimes = null; // will hold Date objects
+    let sunriseTime = null;
+    let ishaEndTime = null; // approximated as 23:59
+
+    const prayerTimeEls = {
+      Fajr: document.getElementById("timeFajr"),
+      Dhuhr: document.getElementById("timeDhuhr"),
+      Asr: document.getElementById("timeAsr"),
+      Maghrib: document.getElementById("timeMaghrib"),
+      Isha: document.getElementById("timeIsha")
+    };
+
+    function pad(n) {
+      return n < 10 ? "0" + n : "" + n;
+    }
+
+    function formatTime(date) {
+      let h = date.getHours();
+      const m = pad(date.getMinutes());
+      const ampm = h >= 12 ? "PM" : "AM";
+      h = h % 12;
+      if (h === 0) h = 12;
+      return `${h}:${m} ${ampm}`;
+    }
+
+    function formatShortTime(date) {
+      let h = date.getHours();
+      const m = pad(date.getMinutes());
+      const ampm = h >= 12 ? "PM" : "AM";
+      h = h % 12;
+      if (h === 0) h = 12;
+      return `${h}:${m} ${ampm}`;
+    }
+
+    function minutesBetween(later, earlier) {
+      return Math.round((later - earlier) / 60000);
+    }
+
+    function secondsBetween(later, earlier) {
+      return Math.floor((later - earlier) / 1000);
+    }
+
+    function formatDurationSeconds(totalSeconds) {
+      if (totalSeconds < 0) totalSeconds = 0;
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor((totalSeconds % 3600) / 60);
+      const s = totalSeconds % 60;
+      if (h > 0) {
+        return `${h}:${pad(m)}:${pad(s)}`;
+      }
+      return `${m}:${pad(s)}`;
+    }
+
+    function updateClock() {
+      const now = new Date();
+      const timeEl = document.getElementById("time");
+      const dateEl = document.getElementById("date");
+
+      timeEl.textContent = formatTime(now);
+
+      const dateFormatter = new Intl.DateTimeFormat("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+      });
+      dateEl.textContent = dateFormatter.format(now);
+
+      const todayKey = now.toISOString().slice(0, 10);
+      if (timingsDateKey !== todayKey) {
+        fetchPrayerTimes();
+      }
+
+      updateStatus(now);
+    }
+
+    function buildWindows() {
+      if (!prayerTimes || !sunriseTime) return null;
+
+      const windows = [];
+
+      // Fajr: start = Fajr, end = Sunrise
+      windows.push({
+        name: "Fajr",
+        start: prayerTimes.Fajr,
+        end: sunriseTime
+      });
+
+      // Dhuhr: start = Dhuhr, end = Asr
+      windows.push({
+        name: "Dhuhr",
+        start: prayerTimes.Dhuhr,
+        end: prayerTimes.Asr
+      });
+
+      // Asr: start = Asr, end = Maghrib
+      windows.push({
+        name: "Asr",
+        start: prayerTimes.Asr,
+        end: prayerTimes.Maghrib
+      });
+
+      // Maghrib: start = Maghrib, end = Isha
+      windows.push({
+        name: "Maghrib",
+        start: prayerTimes.Maghrib,
+        end: prayerTimes.Isha
+      });
+
+      // Isha: start = Isha, end = ishaEndTime (approx)
+      windows.push({
+        name: "Isha",
+        start: prayerTimes.Isha,
+        end: ishaEndTime
+      });
+
+      return windows;
+    }
+
+    function getSalahState(now) {
+      if (!prayerTimes || !sunriseTime || !ishaEndTime) return null;
+
+      const windows = buildWindows();
+      const firstStart = windows[0].start;
+      const lastEnd = windows[windows.length - 1].end;
+
+      // Before Fajr window entirely
+      if (now < firstStart) {
+        return {
+          stage: "before",
+          current: "Fajr",
+          next: "Fajr",
+          windowStart: firstStart,
+          windowEnd: sunriseTime
+        };
+      }
+
+      // Within one of the prayer windows
+      for (let i = 0; i < windows.length; i++) {
+        const w = windows[i];
+        if (now >= w.start && now < w.end) {
+          const next = i < windows.length - 1 ? windows[i + 1].name : null;
+          return {
+            stage: "in",
+            current: w.name,
+            next,
+            windowStart: w.start,
+            windowEnd: w.end
+          };
+        }
+      }
+
+      // After a window but before the next window starts
+      for (let i = 0; i < windows.length; i++) {
+        const w = windows[i];
+        if (now >= w.end) {
+          const nextIndex = i + 1;
+          if (nextIndex < windows.length) {
+            const nextWindow = windows[nextIndex];
+            if (now < nextWindow.start) {
+              return {
+                stage: "gap",
+                current: w.name,
+                next: nextWindow.name,
+                windowStart: w.start,
+                windowEnd: w.end,
+                nextStart: nextWindow.start
+              };
+            }
+          }
+        }
+      }
+
+      // Past Isha window (after ishaEndTime)
+      if (now >= lastEnd) {
+        return {
+          stage: "afterAll",
+          current: "Isha",
+          next: "Fajr", // tomorrow
+          windowStart: windows[windows.length - 1].start,
+          windowEnd: lastEnd,
+          nextStart: null
+        };
+      }
+
+      return null;
+    }
+
+    function updatePrayerRow(state) {
+      const pills = document.querySelectorAll(".prayer-pill");
+      pills.forEach((pill) => {
+        pill.classList.remove("active", "upcoming");
+        const name = pill.getAttribute("data-prayer");
+        if (!state) return;
+
+        if (state.stage === "before") {
+          // Before Fajr: Fajr is upcoming
+          if (name === "Fajr") {
+            pill.classList.add("upcoming");
+          }
+        } else if (state.stage === "in") {
+          if (name === state.current) {
+            pill.classList.add("active");
+          } else if (name === state.next) {
+            pill.classList.add("upcoming");
+          }
+        } else if (state.stage === "gap") {
+          // Last prayer is over, next is upcoming
+          if (name === state.next) {
+            pill.classList.add("upcoming");
+          }
+        } else if (state.stage === "afterAll") {
+          // All done for the day; no highlight needed
+        }
+      });
+    }
+
+    function updateStatus(now) {
+      const statusMain = document.getElementById("statusMain");
+      const statusDetail = document.getElementById("statusDetail");
+
+      if (!prayerTimes || !sunriseTime || !ishaEndTime) {
+        statusMain.textContent = "Loading prayer times…";
+        statusMain.className = "status-main";
+        statusDetail.textContent = "";
+        statusDetail.className = "status-detail";
+        return;
+      }
+
+      const state = getSalahState(now);
+      updatePrayerRow(state);
+
+      if (!state) {
+        statusMain.textContent = "Unable to determine salah state";
+        statusMain.className = "status-main over";
+        statusDetail.textContent = "Check your internet connection.";
+        statusDetail.className = "status-detail";
+        return;
+      }
+
+      if (state.stage === "before") {
+        const secondsToStart = secondsBetween(state.windowStart, now);
+        const minsToStart = minutesBetween(state.windowStart, now);
+        statusMain.textContent = `Before ${state.current}`;
+        statusMain.className = "status-main before";
+        statusDetail.textContent =
+          `${state.current} in: ${formatDurationSeconds(secondsToStart)} ` +
+          `(${minsToStart} minute${minsToStart === 1 ? "" : "s"})`;
+        statusDetail.className = "status-detail";
+        return;
+      }
+
+      if (state.stage === "in") {
+        const secondsSinceStart = secondsBetween(now, state.windowStart);
+        const secondsToEnd = secondsBetween(state.windowEnd, now);
+        const minsToEnd = minutesBetween(state.windowEnd, now);
+        const warningWindow = WARNING_WINDOWS[state.current] || 10;
+        const inDanger = minsToEnd <= warningWindow;
+
+        if (inDanger) {
+          statusMain.textContent = `${state.current} time is almost over`;
+          statusMain.className = "status-main danger";
+          statusDetail.textContent =
+            `Hurry. Window ends in ${formatDurationSeconds(secondsToEnd)} ` +
+            `(${minsToEnd} minute${minsToEnd === 1 ? "" : "s"}).`;
+          statusDetail.className = "status-detail danger";
+        } else {
+          statusMain.textContent = `${state.current} time is in`;
+          statusMain.className = "status-main active";
+          statusDetail.textContent =
+            `Since ${state.current}: ${formatDurationSeconds(
+              secondsSinceStart
+            )}  ·  ` +
+            `Ends in: ${formatDurationSeconds(secondsToEnd)} ` +
+            `(${minsToEnd} min)`;
+          statusDetail.className = "status-detail";
+        }
+        return;
+      }
+
+      if (state.stage === "gap") {
+        const secondsToNext = secondsBetween(state.nextStart, now);
+        const minsToNext = minutesBetween(state.nextStart, now);
+        statusMain.textContent = `${state.current} time is over`;
+        statusMain.className = "status-main over";
+        statusDetail.textContent =
+          `If you missed it, pray qada. ` +
+          `Next: ${state.next} in ${formatDurationSeconds(
+            secondsToNext
+          )} (${minsToNext} min).`;
+        statusDetail.className = "status-detail";
+        return;
+      }
+
+      if (state.stage === "afterAll") {
+        statusMain.textContent = "Isha time is over";
+        statusMain.className = "status-main over";
+        statusDetail.textContent =
+          "If you missed it, pray qada and reset your intention for tomorrow.";
+        statusDetail.className = "status-detail";
+      }
+    }
+
+    async function fetchPrayerTimes() {
+      try {
+        const now = new Date();
+        const todayKey = now.toISOString().slice(0, 10);
+
+        const url = `https://api.aladhan.com/v1/timings?latitude=${LATITUDE}` +
+                    `&longitude=${LONGITUDE}` +
+                    `&method=${METHOD}` +
+                    `&school=${SCHOOL}` +
+                    `&timezonestring=${encodeURIComponent(TIMEZONE)}`;
+
+        const resp = await fetch(url);
+        const json = await resp.json();
+
+        const timings = json.data.timings;
+        const today = new Date();
+
+        function makeDateFromTimeString(tstr) {
+          const [h, m] = tstr.split(":").map((x) => parseInt(x, 10));
+          return new Date(
+            today.getFullYear(),
+            today.getMonth(),
+            today.getDate(),
+            h,
+            m,
+            0
+          );
+        }
+
+        prayerTimes = {
+          Fajr: makeDateFromTimeString(timings.Fajr),
+          Dhuhr: makeDateFromTimeString(timings.Dhuhr),
+          Asr: makeDateFromTimeString(timings.Asr),
+          Maghrib: makeDateFromTimeString(timings.Maghrib),
+          Isha: makeDateFromTimeString(timings.Isha)
+        };
+
+        sunriseTime = makeDateFromTimeString(timings.Sunrise);
+
+        // Approximate Isha end as 23:59 today
+        ishaEndTime = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate(),
+          23,
+          59,
+          59
+        );
+
+        // Update bottom row prayer times
+        PRAYER_ORDER.forEach((name) => {
+          const el = prayerTimeEls[name];
+          if (el && prayerTimes[name]) {
+            el.textContent = formatShortTime(prayerTimes[name]);
+          }
+        });
+
+        timingsDateKey = todayKey;
+      } catch (e) {
+        console.error("Error fetching prayer times", e);
+        const statusMain = document.getElementById("statusMain");
+        const statusDetail = document.getElementById("statusDetail");
+        statusMain.textContent = "Error loading prayer times";
+        statusMain.className = "status-main over";
+        statusDetail.textContent =
+          "Check internet connection. Page will retry automatically.";
+        statusDetail.className = "status-detail";
+      }
+    }
+
+    // Start
+    fetchPrayerTimes();
+    updateClock();
+    setInterval(updateClock, 1000);
   </script>
-
 </body>
 </html>
