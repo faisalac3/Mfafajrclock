@@ -48,7 +48,6 @@
       gap: 32px;
     }
 
-    /* loving header */
     .header-love {
       text-align: center;
       font-size: 1.25rem;
@@ -64,23 +63,23 @@
     }
 
     .time {
-      font-size: clamp(4.2rem, 9vw, 6rem);
+      font-size: clamp(5.5rem, 14vw, 8rem);
       font-weight: 600;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.12em;
       color: #f9fafb;
-      text-shadow: 0 0 28px rgba(148, 163, 253, 0.55);
-      margin-bottom: 6px;
+      text-shadow: 0 0 34px rgba(148, 163, 253, 0.65);
+      margin-bottom: 8px;
     }
 
     .date {
-      font-size: 1.2rem;
+      font-size: 1.25rem;
       color: #aeb4c8;
-      letter-spacing: 0.16em;
+      letter-spacing: 0.18em;
       text-transform: uppercase;
     }
 
     .status-block {
-      padding: 22px 22px 24px;
+      padding: 24px 24px 26px;
       border-radius: 26px;
       background: linear-gradient(
         135deg,
@@ -116,11 +115,20 @@
 
     .status-main.danger {
       color: var(--fg-danger);
-      font-size: 2.1rem;
+      font-size: 2rem;
     }
 
     .status-main.over {
       color: var(--fg-over);
+    }
+
+    /* Fajr special size */
+    .status-main.fajr-large {
+      font-size: 2.4rem;
+    }
+
+    .status-main.danger.fajr-large {
+      font-size: 2.7rem;
     }
 
     .status-detail {
@@ -133,6 +141,10 @@
     .status-detail.danger {
       color: var(--fg-danger);
       font-weight: 600;
+    }
+
+    .status-detail.fajr-large {
+      font-size: 1.8rem;
     }
 
     .small-note {
@@ -192,10 +204,13 @@
       .wrapper {
         padding: 22px 16px 20px;
       }
-      .time { font-size: 4rem; }
-      .status-main { font-size: 1.5rem; }
-      .status-main.danger { font-size: 1.8rem; }
-      .status-detail { font-size: 1.1rem; }
+      .time { font-size: 4.5rem; }
+      .status-main { font-size: 1.6rem; }
+      .status-main.danger { font-size: 1.9rem; }
+      .status-main.fajr-large { font-size: 2.1rem; }
+      .status-main.danger.fajr-large { font-size: 2.4rem; }
+      .status-detail { font-size: 1.15rem; }
+      .status-detail.fajr-large { font-size: 1.5rem; }
       .prayer-pill { padding: 8px 6px 10px; }
       .prayer-pill .prayer-name { font-size: 0.85rem; }
       .prayer-pill .prayer-time { font-size: 1rem; }
@@ -251,24 +266,24 @@
     const LATITUDE = 40.7326; // Farmingdale, NY approx
     const LONGITUDE = -73.4454;
     const TIMEZONE = "America/New_York";
-    const METHOD = 2; // ISNA as calc method
-    const SCHOOL = 1; // 1 = Hanafi (for Asr)
+    const METHOD = 2; // ISNA
+    const SCHOOL = 1; // Hanafi Asr
 
     // Danger window in minutes before the end of each prayer window
     const WARNING_WINDOWS = {
-      Fajr: 15,     // before sunrise
-      Dhuhr: 45,    // before Asr
-      Asr: 20,      // before Maghrib
-      Maghrib: 5,   // before Isha
-      Isha: 45      // before approximate end
+      Fajr: 15,
+      Dhuhr: 45,
+      Asr: 20,
+      Maghrib: 5,
+      Isha: 45
     };
 
     const PRAYER_ORDER = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
 
     let timingsDateKey = null;
-    let prayerTimes = null; // will hold Date objects
+    let prayerTimes = null; // Date objects
     let sunriseTime = null;
-    let ishaEndTime = null; // approximated as 23:59
+    let ishaEndTime = null; // approx 23:59
 
     const prayerTimeEls = {
       Fajr: document.getElementById("timeFajr"),
@@ -278,9 +293,7 @@
       Isha: document.getElementById("timeIsha")
     };
 
-    function pad(n) {
-      return n < 10 ? "0" + n : "" + n;
-    }
+    function pad(n) { return n < 10 ? "0" + n : "" + n; }
 
     function formatTime(date) {
       let h = date.getHours();
@@ -313,9 +326,7 @@
       const h = Math.floor(totalSeconds / 3600);
       const m = Math.floor((totalSeconds % 3600) / 60);
       const s = totalSeconds % 60;
-      if (h > 0) {
-        return `${h}:${pad(m)}:${pad(s)}`;
-      }
+      if (h > 0) return `${h}:${pad(m)}:${pad(s)}`;
       return `${m}:${pad(s)}`;
     }
 
@@ -347,35 +358,30 @@
 
       const windows = [];
 
-      // Fajr: start = Fajr, end = Sunrise
       windows.push({
         name: "Fajr",
         start: prayerTimes.Fajr,
         end: sunriseTime
       });
 
-      // Dhuhr: start = Dhuhr, end = Asr
       windows.push({
         name: "Dhuhr",
         start: prayerTimes.Dhuhr,
         end: prayerTimes.Asr
       });
 
-      // Asr: start = Asr, end = Maghrib
       windows.push({
         name: "Asr",
         start: prayerTimes.Asr,
         end: prayerTimes.Maghrib
       });
 
-      // Maghrib: start = Maghrib, end = Isha
       windows.push({
         name: "Maghrib",
         start: prayerTimes.Maghrib,
         end: prayerTimes.Isha
       });
 
-      // Isha: start = Isha, end = ishaEndTime (approx)
       windows.push({
         name: "Isha",
         start: prayerTimes.Isha,
@@ -392,7 +398,6 @@
       const firstStart = windows[0].start;
       const lastEnd = windows[windows.length - 1].end;
 
-      // Before Fajr window entirely
       if (now < firstStart) {
         return {
           stage: "before",
@@ -403,7 +408,6 @@
         };
       }
 
-      // Within one of the prayer windows
       for (let i = 0; i < windows.length; i++) {
         const w = windows[i];
         if (now >= w.start && now < w.end) {
@@ -418,7 +422,6 @@
         }
       }
 
-      // After a window but before the next window starts
       for (let i = 0; i < windows.length; i++) {
         const w = windows[i];
         if (now >= w.end) {
@@ -439,12 +442,11 @@
         }
       }
 
-      // Past Isha window (after ishaEndTime)
       if (now >= lastEnd) {
         return {
           stage: "afterAll",
           current: "Isha",
-          next: "Fajr", // tomorrow
+          next: "Fajr",
           windowStart: windows[windows.length - 1].start,
           windowEnd: lastEnd,
           nextStart: null
@@ -462,23 +464,12 @@
         if (!state) return;
 
         if (state.stage === "before") {
-          // Before Fajr: Fajr is upcoming
-          if (name === "Fajr") {
-            pill.classList.add("upcoming");
-          }
+          if (name === "Fajr") pill.classList.add("upcoming");
         } else if (state.stage === "in") {
-          if (name === state.current) {
-            pill.classList.add("active");
-          } else if (name === state.next) {
-            pill.classList.add("upcoming");
-          }
+          if (name === state.current) pill.classList.add("active");
+          else if (name === state.next) pill.classList.add("upcoming");
         } else if (state.stage === "gap") {
-          // Last prayer is over, next is upcoming
-          if (name === state.next) {
-            pill.classList.add("upcoming");
-          }
-        } else if (state.stage === "afterAll") {
-          // All done for the day; no highlight needed
+          if (name === state.next) pill.classList.add("upcoming");
         }
       });
     }
@@ -506,15 +497,23 @@
         return;
       }
 
+      const isFajrContext =
+        (state.stage === "before" && state.current === "Fajr") ||
+        (state.stage === "in" && state.current === "Fajr");
+
       if (state.stage === "before") {
         const secondsToStart = secondsBetween(state.windowStart, now);
         const minsToStart = minutesBetween(state.windowStart, now);
+
         statusMain.textContent = `Before ${state.current}`;
-        statusMain.className = "status-main before";
+        statusMain.className =
+          "status-main before" + (isFajrContext ? " fajr-large" : "");
+
         statusDetail.textContent =
           `${state.current} in: ${formatDurationSeconds(secondsToStart)} ` +
           `(${minsToStart} minute${minsToStart === 1 ? "" : "s"})`;
-        statusDetail.className = "status-detail";
+        statusDetail.className =
+          "status-detail" + (isFajrContext ? " fajr-large" : "");
         return;
       }
 
@@ -527,21 +526,25 @@
 
         if (inDanger) {
           statusMain.textContent = `${state.current} time is almost over`;
-          statusMain.className = "status-main danger";
+          statusMain.className =
+            "status-main danger" + (isFajrContext ? " fajr-large" : "");
           statusDetail.textContent =
             `Hurry. Window ends in ${formatDurationSeconds(secondsToEnd)} ` +
             `(${minsToEnd} minute${minsToEnd === 1 ? "" : "s"}).`;
-          statusDetail.className = "status-detail danger";
+          statusDetail.className =
+            "status-detail danger" + (isFajrContext ? " fajr-large" : "");
         } else {
           statusMain.textContent = `${state.current} time is in`;
-          statusMain.className = "status-main active";
+          statusMain.className =
+            "status-main active" + (isFajrContext ? " fajr-large" : "");
           statusDetail.textContent =
             `Since ${state.current}: ${formatDurationSeconds(
               secondsSinceStart
             )}  ·  ` +
             `Ends in: ${formatDurationSeconds(secondsToEnd)} ` +
             `(${minsToEnd} min)`;
-          statusDetail.className = "status-detail";
+          statusDetail.className =
+            "status-detail" + (isFajrContext ? " fajr-large" : "");
         }
         return;
       }
@@ -574,11 +577,12 @@
         const now = new Date();
         const todayKey = now.toISOString().slice(0, 10);
 
-        const url = `https://api.aladhan.com/v1/timings?latitude=${LATITUDE}` +
-                    `&longitude=${LONGITUDE}` +
-                    `&method=${METHOD}` +
-                    `&school=${SCHOOL}` +
-                    `&timezonestring=${encodeURIComponent(TIMEZONE)}`;
+        const url =
+          `https://api.aladhan.com/v1/timings?latitude=${LATITUDE}` +
+          `&longitude=${LONGITUDE}` +
+          `&method=${METHOD}` +
+          `&school=${SCHOOL}` +
+          `&timezonestring=${encodeURIComponent(TIMEZONE)}`;
 
         const resp = await fetch(url);
         const json = await resp.json();
@@ -608,7 +612,6 @@
 
         sunriseTime = makeDateFromTimeString(timings.Sunrise);
 
-        // Approximate Isha end as 23:59 today
         ishaEndTime = new Date(
           today.getFullYear(),
           today.getMonth(),
@@ -618,7 +621,6 @@
           59
         );
 
-        // Update bottom row prayer times
         PRAYER_ORDER.forEach((name) => {
           const el = prayerTimeEls[name];
           if (el && prayerTimes[name]) {
@@ -639,7 +641,6 @@
       }
     }
 
-    // Start
     fetchPrayerTimes();
     updateClock();
     setInterval(updateClock, 1000);
