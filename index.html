@@ -2,17 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MFA Fajr Clock</title>
+  <title>MFA Salah Clock</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root {
       --bg: #050608;
+      --bg-soft: #0b0f1c;
       --fg-soft: #cbd5f5;
       --fg-strong: #fef2c0;
       --fg-before: #76c7ff;
       --fg-danger: #ff6b6b;
       --fg-over: #888ea8;
       --accent: #1f2937;
+      --pill-active: #4f46e5;
+      --pill-upcoming: #1f2937;
     }
 
     * {
@@ -22,7 +25,7 @@
     }
 
     body {
-      background: radial-gradient(circle at top, #101320, #020308 60%);
+      background: radial-gradient(circle at top, #101320, #020308 55%);
       color: var(--fg-soft);
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
         "Segoe UI", sans-serif;
@@ -35,32 +38,32 @@
 
     .wrapper {
       width: 100%;
-      max-width: 720px;
-      border-radius: 24px;
-      padding: 24px 24px 28px;
-      background: rgba(9, 11, 25, 0.9);
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
+      max-width: 780px;
+      border-radius: 26px;
+      padding: 24px 24px 22px;
+      background: rgba(9, 11, 25, 0.92);
+      box-shadow: 0 20px 44px rgba(0, 0, 0, 0.7);
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      gap: 24px;
+      gap: 20px;
     }
 
     .clock-container {
       text-align: center;
+      margin-bottom: 4px;
     }
 
     .time {
-      font-size: clamp(3.5rem, 8vw, 4.5rem);
+      font-size: clamp(3.5rem, 8vw, 4.6rem);
       font-weight: 600;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
       color: #f9fafb;
       text-shadow: 0 0 24px rgba(148, 163, 253, 0.55);
       margin-bottom: 4px;
     }
 
     .date {
-      font-size: 0.95rem;
+      font-size: 0.96rem;
       color: #9ca3af;
       letter-spacing: 0.16em;
       text-transform: uppercase;
@@ -68,11 +71,11 @@
 
     .status-block {
       padding: 16px 16px 18px;
-      border-radius: 18px;
+      border-radius: 20px;
       background: linear-gradient(
         135deg,
-        rgba(15, 23, 42, 0.95),
-        rgba(17, 24, 39, 0.95)
+        rgba(15, 23, 42, 0.96),
+        rgba(17, 24, 39, 0.96)
       );
       border: 1px solid rgba(148, 163, 253, 0.18);
     }
@@ -86,7 +89,7 @@
     }
 
     .status-main {
-      font-size: 1.15rem;
+      font-size: 1.16rem;
       font-weight: 500;
       margin-bottom: 6px;
     }
@@ -108,7 +111,7 @@
     }
 
     .status-detail {
-      font-size: 0.95rem;
+      font-size: 0.96rem;
       color: #9ca3af;
     }
 
@@ -125,10 +128,85 @@
       line-height: 1.4;
     }
 
-    @media (max-width: 480px) {
+    .prayer-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+      margin-top: 4px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(31, 41, 55, 0.9);
+    }
+
+    .prayer-pill {
+      flex: 1;
+      border-radius: 999px;
+      padding: 6px 8px 7px;
+      background: rgba(15, 23, 42, 0.88);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+    }
+
+    .prayer-pill .prayer-name {
+      font-size: 0.74rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #9ca3af;
+    }
+
+    .prayer-pill .prayer-time {
+      font-size: 0.9rem;
+      color: #e5e7eb;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .prayer-pill.active {
+      background: radial-gradient(circle at top, #4f46e5, #111827);
+      box-shadow: 0 0 18px rgba(129, 140, 248, 0.8);
+      transform: translateY(-1px);
+    }
+
+    .prayer-pill.active .prayer-name {
+      color: #e5e7eb;
+    }
+
+    .prayer-pill.active .prayer-time {
+      color: #ffffff;
+      font-weight: 500;
+    }
+
+    .prayer-pill.upcoming {
+      background: rgba(31, 41, 55, 0.96);
+      box-shadow: 0 0 10px rgba(55, 65, 81, 0.7);
+    }
+
+    .prayer-pill.upcoming .prayer-name {
+      color: #cbd5f5;
+    }
+
+    @media (max-width: 600px) {
       .wrapper {
-        border-radius: 18px;
-        padding: 18px 16px 20px;
+        border-radius: 20px;
+        padding: 18px 14px 18px;
+      }
+
+      .status-block {
+        padding: 14px 12px 16px;
+      }
+
+      .prayer-pill {
+        padding: 5px 4px 6px;
+      }
+
+      .prayer-pill .prayer-name {
+        font-size: 0.7rem;
+        letter-spacing: 0.14em;
+      }
+
+      .prayer-pill .prayer-time {
+        font-size: 0.82rem;
       }
     }
   </style>
@@ -141,27 +219,69 @@
     </div>
 
     <div class="status-block">
-      <div class="status-label">Fajr window · Farmingdale, NY</div>
+      <div class="status-label">Salah window · Farmingdale, NY</div>
       <div id="statusMain" class="status-main">Loading prayer times…</div>
       <div id="statusDetail" class="status-detail"></div>
       <div class="small-note">
-        Red = your “you need to move now” zone (wudu + 2 sunnah + 2 fard before
-        sunrise).
+        Red means you are in the last minutes of this prayer window
+        (realistic time to make wudu and pray before it ends).
+      </div>
+    </div>
+
+    <div class="prayer-row">
+      <div class="prayer-pill" data-prayer="Fajr">
+        <div class="prayer-name">Fajr</div>
+        <div class="prayer-time" id="timeFajr">--:--</div>
+      </div>
+      <div class="prayer-pill" data-prayer="Dhuhr">
+        <div class="prayer-name">Dhuhr</div>
+        <div class="prayer-time" id="timeDhuhr">--:--</div>
+      </div>
+      <div class="prayer-pill" data-prayer="Asr">
+        <div class="prayer-name">Asr</div>
+        <div class="prayer-time" id="timeAsr">--:--</div>
+      </div>
+      <div class="prayer-pill" data-prayer="Maghrib">
+        <div class="prayer-name">Maghrib</div>
+        <div class="prayer-time" id="timeMaghrib">--:--</div>
+      </div>
+      <div class="prayer-pill" data-prayer="Isha">
+        <div class="prayer-name">Isha</div>
+        <div class="prayer-time" id="timeIsha">--:--</div>
       </div>
     </div>
   </div>
 
   <script>
     // CONFIG
-    const LATITUDE = 40.7326;
+    const LATITUDE = 40.7326; // Farmingdale, NY approx
     const LONGITUDE = -73.4454;
     const TIMEZONE = "America/New_York";
-    const METHOD = 2; // ISNA; adjust if you follow a different method
-    const WARNING_MINUTES = 15; // red zone before sunrise
+    const METHOD = 2; // ISNA; change if you prefer another method
 
-    let fajrTime = null;
-    let sunriseTime = null;
+    // Danger window in minutes before the end of each prayer window
+    const WARNING_WINDOWS = {
+      Fajr: 15,     // before sunrise
+      Dhuhr: 45,    // before Asr
+      Asr: 20,      // before Maghrib
+      Maghrib: 5,   // before Isha
+      Isha: 45      // before midnight (approx)
+    };
+
+    const PRAYER_ORDER = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
+
     let timingsDateKey = null;
+    let prayerTimes = null; // will hold Date objects
+    let sunriseTime = null;
+    let ishaEndTime = null; // approximated as 23:59
+
+    const prayerTimeEls = {
+      Fajr: document.getElementById("timeFajr"),
+      Dhuhr: document.getElementById("timeDhuhr"),
+      Asr: document.getElementById("timeAsr"),
+      Maghrib: document.getElementById("timeMaghrib"),
+      Isha: document.getElementById("timeIsha")
+    };
 
     function pad(n) {
       return n < 10 ? "0" + n : "" + n;
@@ -176,6 +296,34 @@
       return `${h}:${m} ${ampm}`;
     }
 
+    function formatShortTime(date) {
+      let h = date.getHours();
+      const m = pad(date.getMinutes());
+      const ampm = h >= 12 ? "PM" : "AM";
+      h = h % 12;
+      if (h === 0) h = 12;
+      return `${h}:${m} ${ampm}`;
+    }
+
+    function minutesBetween(later, earlier) {
+      return Math.round((later - earlier) / 60000);
+    }
+
+    function secondsBetween(later, earlier) {
+      return Math.floor((later - earlier) / 1000);
+    }
+
+    function formatDurationSeconds(totalSeconds) {
+      if (totalSeconds < 0) totalSeconds = 0;
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor((totalSeconds % 3600) / 60);
+      const s = totalSeconds % 60;
+      if (h > 0) {
+        return `${h}:${pad(m)}:${pad(s)}`;
+      }
+      return `${m}:${pad(s)}`;
+    }
+
     function updateClock() {
       const now = new Date();
       const timeEl = document.getElementById("time");
@@ -187,7 +335,7 @@
         weekday: "short",
         month: "short",
         day: "numeric",
-        year: "numeric",
+        year: "numeric"
       });
       dateEl.textContent = dateFormatter.format(now);
 
@@ -199,15 +347,153 @@
       updateStatus(now);
     }
 
-    function minutesBetween(later, earlier) {
-      return Math.round((later - earlier) / 60000);
+    function buildWindows() {
+      if (!prayerTimes || !sunriseTime) return null;
+
+      const windows = [];
+
+      // Fajr: start = Fajr, end = Sunrise
+      windows.push({
+        name: "Fajr",
+        start: prayerTimes.Fajr,
+        end: sunriseTime
+      });
+
+      // Dhuhr: start = Dhuhr, end = Asr
+      windows.push({
+        name: "Dhuhr",
+        start: prayerTimes.Dhuhr,
+        end: prayerTimes.Asr
+      });
+
+      // Asr: start = Asr, end = Maghrib
+      windows.push({
+        name: "Asr",
+        start: prayerTimes.Asr,
+        end: prayerTimes.Maghrib
+      });
+
+      // Maghrib: start = Maghrib, end = Isha
+      windows.push({
+        name: "Maghrib",
+        start: prayerTimes.Maghrib,
+        end: prayerTimes.Isha
+      });
+
+      // Isha: start = Isha, end = ishaEndTime (approx)
+      windows.push({
+        name: "Isha",
+        start: prayerTimes.Isha,
+        end: ishaEndTime
+      });
+
+      return windows;
+    }
+
+    function getSalahState(now) {
+      if (!prayerTimes || !sunriseTime || !ishaEndTime) return null;
+
+      const windows = buildWindows();
+      const firstStart = windows[0].start;
+      const lastEnd = windows[windows.length - 1].end;
+
+      // Before Fajr window entirely
+      if (now < firstStart) {
+        return {
+          stage: "before",
+          current: "Fajr",
+          next: "Fajr",
+          windowStart: firstStart,
+          windowEnd: sunriseTime
+        };
+      }
+
+      // Within one of the prayer windows
+      for (let i = 0; i < windows.length; i++) {
+        const w = windows[i];
+        if (now >= w.start && now < w.end) {
+          const next = i < windows.length - 1 ? windows[i + 1].name : null;
+          return {
+            stage: "in",
+            current: w.name,
+            next,
+            windowStart: w.start,
+            windowEnd: w.end
+          };
+        }
+      }
+
+      // After a window but before the next window starts
+      for (let i = 0; i < windows.length; i++) {
+        const w = windows[i];
+        if (now >= w.end) {
+          const nextIndex = i + 1;
+          if (nextIndex < windows.length) {
+            const nextWindow = windows[nextIndex];
+            if (now < nextWindow.start) {
+              return {
+                stage: "gap",
+                current: w.name,
+                next: nextWindow.name,
+                windowStart: w.start,
+                windowEnd: w.end,
+                nextStart: nextWindow.start
+              };
+            }
+          }
+        }
+      }
+
+      // Past Isha window (after ishaEndTime)
+      if (now >= lastEnd) {
+        return {
+          stage: "afterAll",
+          current: "Isha",
+          next: "Fajr", // tomorrow
+          windowStart: windows[windows.length - 1].start,
+          windowEnd: lastEnd,
+          nextStart: null
+        };
+      }
+
+      return null;
+    }
+
+    function updatePrayerRow(state) {
+      const pills = document.querySelectorAll(".prayer-pill");
+      pills.forEach((pill) => {
+        pill.classList.remove("active", "upcoming");
+        const name = pill.getAttribute("data-prayer");
+        if (!state) return;
+
+        if (state.stage === "before") {
+          // Before Fajr: Fajr is upcoming
+          if (name === "Fajr") {
+            pill.classList.add("upcoming");
+          }
+        } else if (state.stage === "in") {
+          if (name === state.current) {
+            pill.classList.add("active");
+          } else if (name === state.next) {
+            pill.classList.add("upcoming");
+          }
+        } else if (state.stage === "gap") {
+          // Last prayer is over, next is upcoming
+          if (name === state.next) {
+            pill.classList.add("upcoming");
+          }
+        } else if (state.stage === "afterAll") {
+          // All done for the day; no highlight
+          // Optionally mark Isha over or leave all neutral
+        }
+      });
     }
 
     function updateStatus(now) {
       const statusMain = document.getElementById("statusMain");
       const statusDetail = document.getElementById("statusDetail");
 
-      if (!fajrTime || !sunriseTime) {
+      if (!prayerTimes || !sunriseTime || !ishaEndTime) {
         statusMain.textContent = "Loading prayer times…";
         statusMain.className = "status-main";
         statusDetail.textContent = "";
@@ -215,36 +501,76 @@
         return;
       }
 
-      if (now < fajrTime) {
-        const minsToFajr = minutesBetween(fajrTime, now);
-        statusMain.textContent = "Before Fajr";
-        statusMain.className = "status-main before";
-        statusDetail.textContent = `Fajr in: ${minsToFajr} minute${
-          minsToFajr === 1 ? "" : "s"
-        }`;
-        statusDetail.className = "status-detail";
-      } else if (now >= fajrTime && now < sunriseTime) {
-        const minsSinceFajr = minutesBetween(now, fajrTime);
-        const minsToSunrise = minutesBetween(sunriseTime, now);
+      const state = getSalahState(now);
+      updatePrayerRow(state);
 
-        if (minsToSunrise <= WARNING_MINUTES) {
-          statusMain.textContent = "Fajr time is almost over";
+      if (!state) {
+        statusMain.textContent = "Unable to determine salah state";
+        statusMain.className = "status-main over";
+        statusDetail.textContent = "Check your internet connection.";
+        statusDetail.className = "status-detail";
+        return;
+      }
+
+      if (state.stage === "before") {
+        const secondsToStart = secondsBetween(state.windowStart, now);
+        const minsToStart = minutesBetween(state.windowStart, now);
+        statusMain.textContent = `Before ${state.current}`;
+        statusMain.className = "status-main before";
+        statusDetail.textContent =
+          `${state.current} in: ${formatDurationSeconds(secondsToStart)} ` +
+          `(${minsToStart} minute${minsToStart === 1 ? "" : "s"})`;
+        statusDetail.className = "status-detail";
+        return;
+      }
+
+      if (state.stage === "in") {
+        const secondsSinceStart = secondsBetween(now, state.windowStart);
+        const secondsToEnd = secondsBetween(state.windowEnd, now);
+        const minsToEnd = minutesBetween(state.windowEnd, now);
+        const warningWindow = WARNING_WINDOWS[state.current] || 10;
+        const inDanger = minsToEnd <= warningWindow;
+
+        if (inDanger) {
+          statusMain.textContent = `${state.current} time is almost over`;
           statusMain.className = "status-main danger";
-          statusDetail.textContent = `Hurry. Sunrise in ${minsToSunrise} minute${
-            minsToSunrise === 1 ? "" : "s"
-          }.`;
+          statusDetail.textContent =
+            `Hurry. Window ends in ${formatDurationSeconds(secondsToEnd)} ` +
+            `(${minsToEnd} minute${minsToEnd === 1 ? "" : "s"}).`;
           statusDetail.className = "status-detail danger";
         } else {
-          statusMain.textContent = "Fajr time is in";
+          statusMain.textContent = `${state.current} time is in`;
           statusMain.className = "status-main active";
-          statusDetail.textContent = `Since Fajr: ${minsSinceFajr} min   ·   Sunrise in: ${minsToSunrise} min`;
+          statusDetail.textContent =
+            `Since ${state.current}: ${formatDurationSeconds(
+              secondsSinceStart
+            )}  ·  ` +
+            `Ends in: ${formatDurationSeconds(secondsToEnd)} ` +
+            `(${minsToEnd} min)`;
           statusDetail.className = "status-detail";
         }
-      } else {
-        statusMain.textContent = "Fajr time is over";
+        return;
+      }
+
+      if (state.stage === "gap") {
+        const secondsToNext = secondsBetween(state.nextStart, now);
+        const minsToNext = minutesBetween(state.nextStart, now);
+        statusMain.textContent = `${state.current} time is over`;
         statusMain.className = "status-main over";
         statusDetail.textContent =
-          "If you missed it, pray qada and reset intention for tomorrow.";
+          `If you missed it, pray qada. ` +
+          `Next: ${state.next} in ${formatDurationSeconds(
+            secondsToNext
+          )} (${minsToNext} min).`;
+        statusDetail.className = "status-detail";
+        return;
+      }
+
+      if (state.stage === "afterAll") {
+        statusMain.textContent = "Isha time is over";
+        statusMain.className = "status-main over";
+        statusDetail.textContent =
+          "If you missed it, pray qada and reset your intention for tomorrow.";
         statusDetail.className = "status-detail";
       }
     }
@@ -263,27 +589,47 @@
 
         const timings = json.data.timings;
         const today = new Date();
-        const [fajrH, fajrM] = timings.Fajr.split(":").map((x) => parseInt(x, 10));
-        const [sunH, sunM] = timings.Sunrise.split(":").map((x) =>
-          parseInt(x, 10)
+
+        function makeDateFromTimeString(tstr) {
+          const [h, m] = tstr.split(":").map((x) => parseInt(x, 10));
+          return new Date(
+            today.getFullYear(),
+            today.getMonth(),
+            today.getDate(),
+            h,
+            m,
+            0
+          );
+        }
+
+        prayerTimes = {
+          Fajr: makeDateFromTimeString(timings.Fajr),
+          Dhuhr: makeDateFromTimeString(timings.Dhuhr),
+          Asr: makeDateFromTimeString(timings.Asr),
+          Maghrib: makeDateFromTimeString(timings.Maghrib),
+          Isha: makeDateFromTimeString(timings.Isha)
+        };
+
+        sunriseTime = makeDateFromTimeString(timings.Sunrise);
+
+        // Approximate Isha end as 23:59 today
+        ishaEndTime = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate(),
+          23,
+          59,
+          59
         );
 
-        fajrTime = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate(),
-          fajrH,
-          fajrM,
-          0
-        );
-        sunriseTime = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate(),
-          sunH,
-          sunM,
-          0
-        );
+        // Update bottom row prayer times
+        PRAYER_ORDER.forEach((name) => {
+          const el = prayerTimeEls[name];
+          if (el && prayerTimes[name]) {
+            el.textContent = formatShortTime(prayerTimes[name]);
+          }
+        });
+
         timingsDateKey = todayKey;
       } catch (e) {
         console.error("Error fetching prayer times", e);
