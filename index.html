@@ -60,7 +60,7 @@
       text-align: center;
     }
 
-    /* Main time – about 1.2 inch on Fire tablet */
+    /* main time ≈ 1.2" on Fire tablet */
     .time {
       font-size: clamp(6.5rem, 20vw, 11rem);
       font-weight: 600;
@@ -121,7 +121,7 @@
       color: var(--fg-over);
     }
 
-    /* Fajr special size – about 0.9 inch */
+    /* Fajr emphasis */
     .status-main.fajr-large {
       font-size: clamp(4.5rem, 13vw, 8.5rem);
     }
@@ -263,11 +263,11 @@
 
   <script>
     // CONFIG
-    const LATITUDE = 40.7326; // Farmingdale, NY approx
+    const LATITUDE = 40.7326;   // Farmingdale, NY approx
     const LONGITUDE = -73.4454;
     const TIMEZONE = "America/New_York";
-    const METHOD = 2; // ISNA
-    const SCHOOL = 1; // Hanafi Asr
+    const METHOD = 2;  // ISNA
+    const SCHOOL = 1;  // Hanafi Asr
 
     const WARNING_WINDOWS = {
       Fajr: 15,
@@ -598,7 +598,7 @@
         const today = new Date();
 
         function makeDateFromTimeString(tstr) {
-          const [h, m] = tstr.split(":").).map((x) => parseInt(x, 10));
+          const [h, m] = tstr.split(":").map((x) => parseInt(x, 10));  // ← fixed
           return new Date(
             today.getFullYear(),
             today.getMonth(),
@@ -618,14 +618,11 @@
         };
 
         sunriseTime = makeDateFromTimeString(timings.Sunrise);
-
         ishaEndTime = new Date(
           today.getFullYear(),
           today.getMonth(),
           today.getDate(),
-          23,
-          59,
-          59
+          23, 59, 59
         );
 
         PRAYER_ORDER.forEach((name) => {
@@ -643,7 +640,7 @@
         statusMain.textContent = "Error loading prayer times";
         statusMain.className = "status-main over";
         statusDetail.textContent =
-          "Check internet connection. Page will retry automatically.";
+          "Check internet or try reloading. The page will retry automatically.";
         statusDetail.className = "status-detail";
       }
     }
