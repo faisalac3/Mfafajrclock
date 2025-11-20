@@ -42,7 +42,6 @@
       border-radius: 0;
       padding: 24px 32px 24px;
       background: rgba(9, 11, 25, 0.96);
-      box-shadow: 0 0 0 rgba(0, 0, 0, 0);
       display: flex;
       flex-direction: column;
       gap: 24px;
@@ -59,15 +58,15 @@
 
     .clock-container {
       text-align: center;
-      margin-top: 0;
     }
 
+    /* BIG main time – target ~2" on a 10" tablet */
     .time {
-      font-size: clamp(6.5rem, 15vw, 9rem);
+      font-size: clamp(10rem, 40vw, 22rem);
       font-weight: 600;
-      letter-spacing: 0.14em;
+      letter-spacing: 0.16em;
       color: #f9fafb;
-      text-shadow: 0 0 38px rgba(148, 163, 253, 0.7);
+      text-shadow: 0 0 40px rgba(148, 163, 253, 0.75);
       margin-bottom: 8px;
     }
 
@@ -122,13 +121,13 @@
       color: var(--fg-over);
     }
 
-    /* Fajr special size */
+    /* Fajr special size – target ~1" text */
     .status-main.fajr-large {
-      font-size: 2.8rem;
+      font-size: clamp(5rem, 20vw, 10rem);
     }
 
     .status-main.danger.fajr-large {
-      font-size: 3.1rem;
+      font-size: clamp(6rem, 22vw, 11rem);
     }
 
     .status-detail {
@@ -144,7 +143,7 @@
     }
 
     .status-detail.fajr-large {
-      font-size: 2rem;
+      font-size: clamp(3rem, 12vw, 6rem);
     }
 
     .small-note {
@@ -205,13 +204,13 @@
         padding: 18px 14px 18px;
         gap: 18px;
       }
-      .time { font-size: 5rem; }
+      .time { font-size: clamp(6rem, 25vw, 12rem); }
       .status-main { font-size: 1.9rem; }
       .status-main.danger { font-size: 2.2rem; }
-      .status-main.fajr-large { font-size: 2.4rem; }
-      .status-main.danger.fajr-large { font-size: 2.7rem; }
+      .status-main.fajr-large { font-size: clamp(3.5rem, 15vw, 7rem); }
+      .status-main.danger.fajr-large { font-size: clamp(4rem, 17vw, 8rem); }
       .status-detail { font-size: 1.3rem; }
-      .status-detail.fajr-large { font-size: 1.6rem; }
+      .status-detail.fajr-large { font-size: clamp(2rem, 10vw, 4rem); }
       .prayer-pill { padding: 10px 6px 12px; }
       .prayer-pill .prayer-name { font-size: 0.9rem; }
       .prayer-pill .prayer-time { font-size: 1.1rem; }
@@ -506,13 +505,17 @@
         const secondsToStart = secondsBetween(state.windowStart, now);
         const minsToStart = minutesBetween(state.windowStart, now);
 
-        statusMain.textContent = `Before ${state.current}`;
+        // Simpler Fajr wording
+        statusMain.textContent = isFajrContext
+          ? "Fajr window has not started"
+          : `Before ${state.current}`;
         statusMain.className =
           "status-main before" + (isFajrContext ? " fajr-large" : "");
 
-        statusDetail.textContent =
-          `${state.current} in: ${formatDurationSeconds(secondsToStart)} ` +
-          `(${minsToStart} minute${minsToStart === 1 ? "" : "s"})`;
+        statusDetail.textContent = isFajrContext
+          ? `Fajr starts in ${formatDurationSeconds(secondsToStart)} (${minsToStart} min)`
+          : `${state.current} in: ${formatDurationSeconds(secondsToStart)} (${minsToStart} min)`;
+
         statusDetail.className =
           "status-detail" + (isFajrContext ? " fajr-large" : "");
         return;
@@ -526,24 +529,31 @@
         const inDanger = minsToEnd <= warningWindow;
 
         if (inDanger) {
-          statusMain.textContent = `${state.current} time is almost over`;
+          statusMain.textContent = isFajrContext
+            ? "Fajr is about to end"
+            : `${state.current} time is almost over`;
           statusMain.className =
             "status-main danger" + (isFajrContext ? " fajr-large" : "");
-          statusDetail.textContent =
-            `Hurry. Window ends in ${formatDurationSeconds(secondsToEnd)} ` +
-            `(${minsToEnd} minute${minsToEnd === 1 ? "" : "s"}).`;
+
+          statusDetail.textContent = isFajrContext
+            ? `Hurry. Sunrise in ${formatDurationSeconds(secondsToEnd)} (${minsToEnd} min)`
+            : `Hurry. Window ends in ${formatDurationSeconds(secondsToEnd)} (${minsToEnd} min).`;
+
           statusDetail.className =
             "status-detail danger" + (isFajrContext ? " fajr-large" : "");
         } else {
-          statusMain.textContent = `${state.current} time is in`;
+          statusMain.textContent = isFajrContext
+            ? "Fajr time is in"
+            : `${state.current} time is in`;
           statusMain.className =
             "status-main active" + (isFajrContext ? " fajr-large" : "");
-          statusDetail.textContent =
-            `Since ${state.current}: ${formatDurationSeconds(
-              secondsSinceStart
-            )}  ·  ` +
-            `Ends in: ${formatDurationSeconds(secondsToEnd)} ` +
-            `(${minsToEnd} min)`;
+
+          statusDetail.textContent = isFajrContext
+            ? `Sunrise in ${formatDurationSeconds(secondsToEnd)} (${minsToEnd} min)`
+            : `Since ${state.current}: ${formatDurationSeconds(
+                secondsSinceStart
+              )} · Ends in: ${formatDurationSeconds(secondsToEnd)} (${minsToEnd} min)`;
+
           statusDetail.className =
             "status-detail" + (isFajrContext ? " fajr-large" : "");
         }
@@ -556,10 +566,8 @@
         statusMain.textContent = `${state.current} time is over`;
         statusMain.className = "status-main over";
         statusDetail.textContent =
-          `If you missed it, pray qada. ` +
-          `Next: ${state.next} in ${formatDurationSeconds(
-            secondsToNext
-          )} (${minsToNext} min).`;
+          `If you missed it, pray qada. Next: ${state.next} in ` +
+          `${formatDurationSeconds(secondsToNext)} (${minsToNext} min).`;
         statusDetail.className = "status-detail";
         return;
       }
