@@ -1,1 +1,306 @@
-<h1></h1>Fajr Clock loading...</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MFA Fajr Clock</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #050608;
+      --fg-soft: #cbd5f5;
+      --fg-strong: #fef2c0;
+      --fg-before: #76c7ff;
+      --fg-danger: #ff6b6b;
+      --fg-over: #888ea8;
+      --accent: #1f2937;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: radial-gradient(circle at top, #101320, #020308 60%);
+      color: var(--fg-soft);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Segoe UI", sans-serif;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .wrapper {
+      width: 100%;
+      max-width: 720px;
+      border-radius: 24px;
+      padding: 24px 24px 28px;
+      background: rgba(9, 11, 25, 0.9);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .clock-container {
+      text-align: center;
+    }
+
+    .time {
+      font-size: clamp(3.5rem, 8vw, 4.5rem);
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: #f9fafb;
+      text-shadow: 0 0 24px rgba(148, 163, 253, 0.55);
+      margin-bottom: 4px;
+    }
+
+    .date {
+      font-size: 0.95rem;
+      color: #9ca3af;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .status-block {
+      padding: 16px 16px 18px;
+      border-radius: 18px;
+      background: linear-gradient(
+        135deg,
+        rgba(15, 23, 42, 0.95),
+        rgba(17, 24, 39, 0.95)
+      );
+      border: 1px solid rgba(148, 163, 253, 0.18);
+    }
+
+    .status-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+
+    .status-main {
+      font-size: 1.15rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .status-main.before {
+      color: var(--fg-before);
+    }
+
+    .status-main.active {
+      color: var(--fg-strong);
+    }
+
+    .status-main.danger {
+      color: var(--fg-danger);
+    }
+
+    .status-main.over {
+      color: var(--fg-over);
+    }
+
+    .status-detail {
+      font-size: 0.95rem;
+      color: #9ca3af;
+    }
+
+    .status-detail.danger {
+      color: var(--fg-danger);
+      font-weight: 500;
+    }
+
+    .small-note {
+      font-size: 0.78rem;
+      color: #6b7280;
+      margin-top: 10px;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    @media (max-width: 480px) {
+      .wrapper {
+        border-radius: 18px;
+        padding: 18px 16px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="clock-container">
+      <div id="time" class="time">--:--</div>
+      <div id="date" class="date"></div>
+    </div>
+
+    <div class="status-block">
+      <div class="status-label">Fajr window · Farmingdale, NY</div>
+      <div id="statusMain" class="status-main">Loading prayer times…</div>
+      <div id="statusDetail" class="status-detail"></div>
+      <div class="small-note">
+        Red = your “you need to move now” zone (wudu + 2 sunnah + 2 fard before
+        sunrise).
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // CONFIG
+    const LATITUDE = 40.7326;
+    const LONGITUDE = -73.4454;
+    const TIMEZONE = "America/New_York";
+    const METHOD = 2; // ISNA; adjust if you follow a different method
+    const WARNING_MINUTES = 15; // red zone before sunrise
+
+    let fajrTime = null;
+    let sunriseTime = null;
+    let timingsDateKey = null;
+
+    function pad(n) {
+      return n < 10 ? "0" + n : "" + n;
+    }
+
+    function formatTime(date) {
+      let h = date.getHours();
+      const m = pad(date.getMinutes());
+      const ampm = h >= 12 ? "PM" : "AM";
+      h = h % 12;
+      if (h === 0) h = 12;
+      return `${h}:${m} ${ampm}`;
+    }
+
+    function updateClock() {
+      const now = new Date();
+      const timeEl = document.getElementById("time");
+      const dateEl = document.getElementById("date");
+
+      timeEl.textContent = formatTime(now);
+
+      const dateFormatter = new Intl.DateTimeFormat("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+      dateEl.textContent = dateFormatter.format(now);
+
+      const todayKey = now.toISOString().slice(0, 10);
+      if (timingsDateKey !== todayKey) {
+        fetchPrayerTimes();
+      }
+
+      updateStatus(now);
+    }
+
+    function minutesBetween(later, earlier) {
+      return Math.round((later - earlier) / 60000);
+    }
+
+    function updateStatus(now) {
+      const statusMain = document.getElementById("statusMain");
+      const statusDetail = document.getElementById("statusDetail");
+
+      if (!fajrTime || !sunriseTime) {
+        statusMain.textContent = "Loading prayer times…";
+        statusMain.className = "status-main";
+        statusDetail.textContent = "";
+        statusDetail.className = "status-detail";
+        return;
+      }
+
+      if (now < fajrTime) {
+        const minsToFajr = minutesBetween(fajrTime, now);
+        statusMain.textContent = "Before Fajr";
+        statusMain.className = "status-main before";
+        statusDetail.textContent = `Fajr in: ${minsToFajr} minute${
+          minsToFajr === 1 ? "" : "s"
+        }`;
+        statusDetail.className = "status-detail";
+      } else if (now >= fajrTime && now < sunriseTime) {
+        const minsSinceFajr = minutesBetween(now, fajrTime);
+        const minsToSunrise = minutesBetween(sunriseTime, now);
+
+        if (minsToSunrise <= WARNING_MINUTES) {
+          statusMain.textContent = "Fajr time is almost over";
+          statusMain.className = "status-main danger";
+          statusDetail.textContent = `Hurry. Sunrise in ${minsToSunrise} minute${
+            minsToSunrise === 1 ? "" : "s"
+          }.`;
+          statusDetail.className = "status-detail danger";
+        } else {
+          statusMain.textContent = "Fajr time is in";
+          statusMain.className = "status-main active";
+          statusDetail.textContent = `Since Fajr: ${minsSinceFajr} min   ·   Sunrise in: ${minsToSunrise} min`;
+          statusDetail.className = "status-detail";
+        }
+      } else {
+        statusMain.textContent = "Fajr time is over";
+        statusMain.className = "status-main over";
+        statusDetail.textContent =
+          "If you missed it, pray qada and reset intention for tomorrow.";
+        statusDetail.className = "status-detail";
+      }
+    }
+
+    async function fetchPrayerTimes() {
+      try {
+        const now = new Date();
+        const todayKey = now.toISOString().slice(0, 10);
+
+        const url = `https://api.aladhan.com/v1/timings?latitude=${LATITUDE}&longitude=${LONGITUDE}&method=${METHOD}&timezonestring=${encodeURIComponent(
+          TIMEZONE
+        )}`;
+
+        const resp = await fetch(url);
+        const json = await resp.json();
+
+        const timings = json.data.timings;
+        const today = new Date();
+        const [fajrH, fajrM] = timings.Fajr.split(":").map((x) => parseInt(x, 10));
+        const [sunH, sunM] = timings.Sunrise.split(":").map((x) =>
+          parseInt(x, 10)
+        );
+
+        fajrTime = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate(),
+          fajrH,
+          fajrM,
+          0
+        );
+        sunriseTime = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate(),
+          sunH,
+          sunM,
+          0
+        );
+        timingsDateKey = todayKey;
+      } catch (e) {
+        console.error("Error fetching prayer times", e);
+        const statusMain = document.getElementById("statusMain");
+        const statusDetail = document.getElementById("statusDetail");
+        statusMain.textContent = "Error loading prayer times";
+        statusMain.className = "status-main over";
+        statusDetail.textContent =
+          "Check internet connection. Page will retry automatically.";
+        statusDetail.className = "status-detail";
+      }
+    }
+
+    // Start
+    fetchPrayerTimes();
+    updateClock();
+    setInterval(updateClock, 1000);
+  </script>
+</body>
+</html>
