@@ -67,7 +67,6 @@
       text-align: center;
     }
 
-    /* main time ≈ 1.2" on Fire tablet */
     .time {
       font-size: clamp(6.5rem, 20vw, 11rem);
       font-weight: 600;
@@ -127,7 +126,7 @@
       color: var(--fg-over);
     }
 
-    /* Fajr emphasis */
+    /* Fajr emphasis (after Fajr enters) */
     .status-main.fajr-large {
       font-size: clamp(4.5rem, 13vw, 8.5rem);
     }
@@ -270,10 +269,8 @@
     const METHOD = 2; // ISNA
     const SCHOOL = 1; // Hanafi Asr
 
-    // minutes before sunrise to enter "danger" Fajr mode
     const FAJR_WARNING_BEFORE_SUNRISE_MIN = 15;
 
-    // minutes before end for other prayers
     const WARNING_WINDOWS = {
       Fajr: 15,
       Dhuhr: 45,
@@ -285,7 +282,7 @@
     const PRAYER_ORDER = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
 
     let timingsDateKey = null;
-    let prayerTimes = null; // {Fajr, Dhuhr, Asr, Maghrib, Isha}
+    let prayerTimes = null;
     let sunriseTime = null;
 
     const prayerTimeEls = {
@@ -387,20 +384,21 @@
       let upcoming = null;
 
       if (now < Fajr) {
-        // Before Fajr – Fajr countdown, calm mode
+        // Before Fajr - smaller, calm text
         const secsToFajr = secondsBetween(Fajr, now);
         const minsToFajr = minutesBetween(Fajr, now);
 
         statusMain.textContent = "Fajr starts in";
-        statusMain.className = "status-main fajr-large";
+        statusMain.className = "status-main before";
+
         statusDetail.textContent =
           `${formatDurationSeconds(secsToFajr)} (${minsToFajr} min)`;
-        statusDetail.className = "status-detail fajr-large";
+        statusDetail.className = "status-detail";
 
         active = null;
         upcoming = "Fajr";
       } else if (now >= Fajr && now < sunriseTime) {
-        // Fajr window – main focus
+        // Fajr window
         const secsToSunrise = secondsBetween(sunriseTime, now);
         const minsToSunrise = minutesBetween(sunriseTime, now);
 
@@ -408,14 +406,12 @@
         upcoming = "Dhuhr";
 
         if (minsToSunrise <= FAJR_WARNING_BEFORE_SUNRISE_MIN) {
-          // Danger window
           wrapper.classList.add("fajr-warning");
           statusMain.textContent = `⚠️ Sunrise in ${minsToSunrise} min ⚠️`;
           statusMain.className = "status-main fajr-large danger";
           statusDetail.textContent = formatDurationSeconds(secsToSunrise);
           statusDetail.className = "status-detail fajr-large danger";
         } else {
-          // Normal Fajr window
           wrapper.classList.add("fajr-mode");
           statusMain.textContent = `Sunrise in ${minsToSunrise} min`;
           statusMain.className = "status-main fajr-large active";
@@ -501,7 +497,7 @@
           statusDetail.className = "status-detail";
         }
       } else {
-        // Isha window (from Isha until midnight; after midnight new day fetch kicks in)
+        // Isha window (Isha until end of night)
         active = "Isha";
         upcoming = "Fajr";
 
@@ -576,7 +572,6 @@
 
         sunriseTime = makeDateFromTimeString(timings.Sunrise);
 
-        // fill bottom row times
         PRAYER_ORDER.forEach((name) => {
           const el = prayerTimeEls[name];
           if (el && prayerTimes[name]) {
