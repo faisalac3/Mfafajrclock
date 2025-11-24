@@ -595,6 +595,39 @@
     fetchPrayerTimes();
     updateClock();
     setInterval(updateClock, 1000);
+  
+    // --- FREEZE-PROOF PATCH START ---
+
+    // Watchdog: force reload if status isn't updated for 90 seconds
+    let lastStatusUpdate = Date.now();
+
+    // Wrap original updateStatus to track when it last ran
+    const originalUpdateStatus = updateStatus;
+    updateStatus = function(now) {
+      lastStatusUpdate = Date.now();
+      originalUpdateStatus(now);
+    };
+
+    // Watchdog interval
+    setInterval(() => {
+      const now = Date.now();
+      if (now - lastStatusUpdate > 90000) {   // 90 seconds
+        location.reload(); // Fix freeze
+      }
+    }, 30000); // Check every 30 seconds
+
+
+    // Midnight auto-reload (resets everything daily)
+    setInterval(() => {
+      const now = new Date();
+      if (now.getHours() === 0 && now.getMinutes() === 1) {
+        location.reload();
+      }
+    }, 60000); // Check once per minute
+
+    // --- FREEZE-PROOF PATCH END ---
+
+    
   </script>
 </body>
 </html>
